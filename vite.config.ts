@@ -10,14 +10,7 @@ const __dirname = path.dirname(__filename);
 
 // https://vite.dev/config/
 export default defineConfig({
-  // Relative paths keep the single-file build working under GitHub Pages
-  // project URLs such as https://user.github.io/game-test/.
-  base: "./",
   plugins: [react(), tailwindcss(), viteSingleFile()],
-  server: {
-    host: "0.0.0.0",
-    allowedHosts: true,
-  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),

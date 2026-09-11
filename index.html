@@ -2,12 +2,785 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0b0e16" />
     <title>Trap Adventure 2 | Browser Prototype</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: "Courier New", Courier, monospace;
+        background: #0b0e16;
+      }
+
+      * { box-sizing: border-box; }
+
+      html, body { width: 100%; min-height: 100%; margin: 0; }
+
+      body {
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 20% 0%, rgba(75, 143, 183, 0.14), transparent 28%),
+          radial-gradient(circle at 85% 100%, rgba(75, 225, 201, 0.08), transparent 24%),
+          #0b0e16;
+        color: #edf4ff;
+      }
+
+      button { font: inherit; -webkit-tap-highlight-color: transparent; }
+
+      .app {
+        display: flex;
+        flex-direction: column;
+        height: 100dvh;
+        overflow: hidden;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex: 0 0 auto;
+        min-height: 62px;
+        padding: 10px 16px;
+        border-bottom: 1px solid #25344a;
+      }
+
+      .brand, .status { display: flex; align-items: center; gap: 12px; }
+      .brand-copy, .metric { line-height: 1.15; }
+      .label { margin: 0; color: #7c91a9; font-size: 10px; font-weight: 700; letter-spacing: .14em; }
+      .brand .label { color: #85e5d7; letter-spacing: .23em; }
+      .title { margin: 4px 0 0; color: #eef6ff; font-size: 14px; font-weight: 700; letter-spacing: .08em; }
+      .value { margin: 4px 0 0; color: #edf4ff; font-size: 12px; font-weight: 700; }
+      .teal { color: #85e5d7; }
+
+      .signal {
+        width: 8px;
+        height: 8px;
+        flex: 0 0 auto;
+        border-radius: 50%;
+        background: #85e5d7;
+        box-shadow: 0 0 0 0 rgba(133, 229, 215, .42);
+        animation: pulse 1.8s ease-in-out infinite;
+      }
+
+      .restart {
+        border: 1px solid #496079;
+        background: #111a2b;
+        padding: 9px 12px;
+        color: #e9f3ff;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: .12em;
+        cursor: pointer;
+      }
+      .restart:hover, .restart:focus-visible { border-color: #85e5d7; color: #85e5d7; outline: none; }
+
+      .game-area {
+        min-height: 0;
+        flex: 1 1 auto;
+        padding: 12px;
+      }
+
+      .screen {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        min-height: 180px;
+        overflow: hidden;
+        border: 1px solid #334660;
+        background: #101728;
+        box-shadow: 0 0 0 1px rgba(133, 229, 215, .05), 0 20px 60px rgba(0, 0, 0, .38);
+      }
+
+      canvas { display: block; width: 100%; height: 100%; touch-action: none; image-rendering: pixelated; cursor: crosshair; }
+
+      .corner {
+        pointer-events: none;
+        position: absolute;
+        bottom: 14px;
+        color: #abc0d8;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: .12em;
+      }
+      .corner-left { left: 16px; }
+      .corner-left::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 8px; background: #f14f69; }
+      .corner-right { right: 16px; color: #eaf4ff; }
+
+      .mobile-controls {
+        display: none;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 0 12px max(12px, env(safe-area-inset-bottom));
+      }
+      .direction-controls { display: flex; gap: 8px; }
+      .control {
+        width: 64px;
+        height: 62px;
+        border: 1px solid #496681;
+        background: #142035;
+        color: #edf4ff;
+        font-size: 25px;
+        cursor: pointer;
+        touch-action: none;
+        user-select: none;
+      }
+      .control.jump {
+        width: 132px;
+        border-color: #f14f69;
+        background: #412031;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: .2em;
+      }
+      .control.pressed, .control:active { border-color: #85e5d7; background: #1f3549; transform: translateY(2px); }
+      .control.jump.pressed, .control.jump:active { border-color: #ff8ba0; background: #61293e; }
+
+      .footer {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        flex: 0 0 auto;
+        padding: 11px 18px;
+        border-top: 1px solid #25344a;
+        color: #8297ae;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: .11em;
+      }
+
+      @keyframes pulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(133, 229, 215, .38); opacity: 1; }
+        50% { box-shadow: 0 0 0 7px rgba(133, 229, 215, 0); opacity: .7; }
+      }
+
+      @media (max-width: 720px) {
+        .topbar { min-height: 56px; padding: 9px 12px; }
+        .title { font-size: 12px; }
+        .status .metric:first-child { display: none; }
+        .restart { padding: 8px 9px; }
+        .game-area { padding: 10px; }
+        .mobile-controls { display: flex; }
+        .footer { display: none; }
+        .corner { bottom: 10px; font-size: 9px; }
+        .corner-left { left: 11px; }
+        .corner-right { right: 11px; }
+      }
+
+      @media (prefers-reduced-motion: reduce) { .signal { animation: none; } }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <main class="app">
+      <header class="topbar">
+        <div class="brand">
+          <span class="signal" aria-hidden="true"></span>
+          <div class="brand-copy">
+            <p class="label">TRAP ADVENTURE 2</p>
+            <p class="title">BROWSER PROTOTYPE</p>
+          </div>
+        </div>
+        <div class="status">
+          <div class="metric">
+            <p class="label">SIMULATION</p>
+            <p class="value teal">60 HZ LOCK</p>
+          </div>
+          <div class="metric">
+            <p class="label">TIME</p>
+            <p class="value" id="time">00:00.0</p>
+          </div>
+          <button class="restart" id="restart" type="button">REBOOT [R]</button>
+        </div>
+      </header>
+
+      <section class="game-area" aria-label="Trap platform game">
+        <div class="screen">
+          <canvas id="game" aria-label="Trap Adventure game. Move with A and D or arrow keys. Jump with space, W, or up arrow."></canvas>
+          <div class="corner corner-left" id="sector">SECTOR // 01</div>
+          <div class="corner corner-right">DEATHS <span id="deaths">00</span></div>
+        </div>
+      </section>
+
+      <section class="mobile-controls" aria-label="Touch controls">
+        <div class="direction-controls">
+          <button class="control" type="button" data-control="left" aria-label="Move left">&lt;</button>
+          <button class="control" type="button" data-control="right" aria-label="Move right">&gt;</button>
+        </div>
+        <button class="control jump" type="button" data-control="jump" aria-label="Jump">JUMP</button>
+      </section>
+
+      <footer class="footer">
+        <span>A / D OR ARROWS TO MOVE. SPACE / W / UP TO JUMP. R TO REBOOT.</span>
+        <span class="teal">JUMP BUFFER + COYOTE TIME ENABLED</span>
+      </footer>
+    </main>
+
+    <script>
+      "use strict";
+
+      // This file is deliberately self-contained so GitHub Pages can serve it without Node, Vite, or React.
+      const canvas = document.getElementById("game");
+      const context = canvas.getContext("2d", { alpha: false });
+      const timeElement = document.getElementById("time");
+      const deathsElement = document.getElementById("deaths");
+      const sectorElement = document.getElementById("sector");
+      const restartButton = document.getElementById("restart");
+
+      const LOGICAL_HEIGHT = 650;
+      const WORLD_WIDTH = 3000;
+      const STEP = 1 / 60;
+      const playerStart = { x: 80, y: 551 };
+      const checkpointStart = { x: 1472, y: 551 };
+      const checkpointX = 1465;
+      const goal = { x: 2865, y: 380, w: 44, h: 70 };
+      const platforms = [
+        { x: -80, y: 585, w: 590, h: 100 },
+        { x: 640, y: 585, w: 360, h: 100 },
+        { x: 1090, y: 500, w: 300, h: 185 },
+        { x: 1460, y: 585, w: 315, h: 100 },
+        { x: 1870, y: 510, w: 330, h: 175 },
+        { x: 2300, y: 585, w: 330, h: 100 },
+        { x: 2720, y: 450, w: 330, h: 235 }
+      ];
+      const fixedSpikes = [
+        { x: 340, y: 551, w: 34, h: 34 }, { x: 710, y: 551, w: 34, h: 34 },
+        { x: 762, y: 551, w: 34, h: 34 }, { x: 1155, y: 466, w: 34, h: 34 },
+        { x: 1210, y: 466, w: 34, h: 34 }, { x: 1545, y: 551, w: 34, h: 34 },
+        { x: 1970, y: 476, w: 34, h: 34 }, { x: 2025, y: 476, w: 34, h: 34 },
+        { x: 2365, y: 551, w: 34, h: 34 }, { x: 2420, y: 551, w: 34, h: 34 },
+        { x: 2782, y: 416, w: 34, h: 34 }, { x: 2836, y: 416, w: 34, h: 34 }
+      ];
+      const popTemplates = [
+        { x: 884, y: 551, w: 34, h: 34, trigger: 808, delay: 12 },
+        { x: 1290, y: 466, w: 34, h: 34, trigger: 1204, delay: 10 },
+        { x: 1690, y: 551, w: 34, h: 34, trigger: 1605, delay: 12 },
+        { x: 2110, y: 476, w: 34, h: 34, trigger: 2020, delay: 11 },
+        { x: 2525, y: 551, w: 34, h: 34, trigger: 2435, delay: 12 },
+        { x: 2910, y: 416, w: 34, h: 34, trigger: 2830, delay: 8 }
+      ];
+      const dropTemplates = [
+        { x: 1310, y: 130, w: 62, h: 22, trigger: 1130, delay: 16, stop: 468 },
+        { x: 1660, y: 130, w: 64, h: 22, trigger: 1548, delay: 15, stop: 563 },
+        { x: 2560, y: 130, w: 62, h: 22, trigger: 2380, delay: 18, stop: 563 }
+      ];
+      const saws = [
+        { x: 1648, y: 550, r: 24, range: 17, speed: 3.1, phase: 0 },
+        { x: 1940, y: 459, r: 22, range: 24, speed: 2.6, phase: 1.2 },
+        { x: 2472, y: 550, r: 24, range: 21, speed: 3.7, phase: 2.4 }
+      ];
+
+      const input = { left: false, right: false, jump: false, jumpPressed: false };
+      let cssWidth = 1;
+      let cssHeight = 1;
+      let pixelRatio = 1;
+      let framesSinceHud = 0;
+
+      function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
+      function overlap(a, b) {
+        return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+      }
+      function createPlayer(x, y) {
+        return { x, y, w: 30, h: 34, vx: 0, vy: 0, grounded: true, coyote: 7, buffer: 0, facing: 1, squash: 0 };
+      }
+      function resetTrapStates() {
+        state.pops = popTemplates.map((trap) => ({ ...trap, timer: 0, rise: 0, active: false }));
+        state.drops = dropTemplates.map((trap) => ({ ...trap, timer: 0, active: false, yNow: trap.y, vy: 0, landed: false }));
+      }
+      function newGame() {
+        return {
+          mode: "ready",
+          player: createPlayer(playerStart.x, playerStart.y),
+          camera: 0,
+          viewWidth: 980,
+          elapsed: 0,
+          deaths: 0,
+          checkpoint: false,
+          deathFrames: 0,
+          flash: 0,
+          deathPoint: null,
+          pops: [],
+          drops: []
+        };
+      }
+      let state = newGame();
+      resetTrapStates();
+
+      function resetRun() {
+        state = newGame();
+        state.mode = "playing";
+        resetTrapStates();
+        input.left = false;
+        input.right = false;
+        input.jump = false;
+        input.jumpPressed = false;
+        updateHud();
+      }
+      function beginRun() {
+        if (state.mode === "won") resetRun();
+        if (state.mode === "ready") state.mode = "playing";
+      }
+      function respawn() {
+        const spawn = state.checkpoint ? checkpointStart : playerStart;
+        state.player = createPlayer(spawn.x, spawn.y);
+        state.mode = "playing";
+        state.deathFrames = 0;
+        state.deathPoint = null;
+        state.flash = 0;
+        state.camera = clamp(spawn.x - state.viewWidth * .32, 0, Math.max(0, WORLD_WIDTH - state.viewWidth));
+        resetTrapStates();
+      }
+      function die() {
+        if (state.mode !== "playing") return;
+        const player = state.player;
+        state.mode = "dead";
+        state.deaths += 1;
+        state.deathFrames = 36;
+        state.flash = 14;
+        state.deathPoint = { x: player.x + player.w / 2, y: player.y + player.h / 2 };
+        player.vx = 0;
+        player.vy = 0;
+        updateHud();
+      }
+      function spikeHit(player, spike) {
+        if (!overlap(player, spike)) return false;
+        const bottom = player.y + player.h;
+        const samples = [player.x + 4, player.x + player.w / 2, player.x + player.w - 4];
+        return samples.some((sampleX) => {
+          if (sampleX <= spike.x || sampleX >= spike.x + spike.w) return false;
+          const distance = Math.abs(sampleX - (spike.x + spike.w / 2)) / (spike.w / 2);
+          const spikeSurface = spike.y + spike.h * distance;
+          return bottom >= spikeSurface && player.y < spike.y + spike.h;
+        });
+      }
+      function sawHit(player, saw) {
+        const sawY = saw.y + Math.sin(state.elapsed * saw.speed + saw.phase) * saw.range;
+        const nearestX = clamp(saw.x, player.x, player.x + player.w);
+        const nearestY = clamp(sawY, player.y, player.y + player.h);
+        const dx = saw.x - nearestX;
+        const dy = sawY - nearestY;
+        return dx * dx + dy * dy < saw.r * saw.r;
+      }
+      function updateTraps() {
+        const center = state.player.x + state.player.w / 2;
+        state.pops.forEach((trap) => {
+          if (!trap.active && center > trap.trigger) trap.active = true;
+          if (!trap.active) return;
+          trap.timer += 1;
+          if (trap.timer > trap.delay) trap.rise = clamp(trap.rise + .2, 0, 1);
+        });
+        state.drops.forEach((trap) => {
+          if (!trap.active && center > trap.trigger) trap.active = true;
+          if (!trap.active || trap.landed) return;
+          trap.timer += 1;
+          if (trap.timer <= trap.delay) return;
+          trap.vy = Math.min(trap.vy + .72, 16);
+          trap.yNow += trap.vy;
+          if (trap.yNow >= trap.stop) {
+            trap.yNow = trap.stop;
+            trap.landed = true;
+          }
+        });
+      }
+      function tick() {
+        if (state.mode === "dead") {
+          state.flash = Math.max(0, state.flash - 1);
+          state.deathFrames -= 1;
+          if (state.deathFrames <= 0) respawn();
+          return;
+        }
+        if (state.mode !== "playing") return;
+
+        const player = state.player;
+        state.elapsed += STEP;
+        state.flash = Math.max(0, state.flash - 1);
+        player.squash = Math.max(0, player.squash - .12);
+        if (input.jumpPressed) player.buffer = 8;
+        input.jumpPressed = false;
+        player.buffer = Math.max(0, player.buffer - 1);
+        player.coyote = player.grounded ? 7 : Math.max(0, player.coyote - 1);
+
+        const direction = Number(input.right) - Number(input.left);
+        if (direction !== 0) {
+          player.vx = clamp(player.vx + direction * (player.grounded ? .85 : .52), -6.2, 6.2);
+          player.facing = direction;
+        } else {
+          player.vx *= player.grounded ? .70 : .96;
+          if (Math.abs(player.vx) < .04) player.vx = 0;
+        }
+        if (player.buffer > 0 && player.coyote > 0) {
+          player.vy = -14.1;
+          player.grounded = false;
+          player.coyote = 0;
+          player.buffer = 0;
+          player.squash = 1;
+        }
+        if (!input.jump && player.vy < -5) player.vy += .70;
+        player.vy = Math.min(player.vy + .76, 16);
+        player.x = clamp(player.x + player.vx, -20, WORLD_WIDTH - player.w);
+
+        const oldBottom = player.y + player.h;
+        player.y += player.vy;
+        player.grounded = false;
+        platforms.forEach((platform) => {
+          const isOverPlatform = player.x + player.w - 4 > platform.x && player.x + 4 < platform.x + platform.w;
+          if (isOverPlatform && player.vy >= 0 && oldBottom <= platform.y + 12 && player.y + player.h >= platform.y) {
+            player.y = platform.y - player.h;
+            player.vy = 0;
+            player.grounded = true;
+            player.coyote = 7;
+            player.squash = .7;
+          }
+        });
+        if (player.grounded && player.buffer > 0) {
+          player.vy = -14.1;
+          player.grounded = false;
+          player.buffer = 0;
+          player.squash = 1;
+        }
+
+        updateTraps();
+        const hitsStatic = fixedSpikes.some((spike) => spikeHit(player, spike));
+        const hitsPop = state.pops.some((trap) => {
+          if (trap.rise < .62) return false;
+          return spikeHit(player, { x: trap.x, y: trap.y + trap.h * (1 - trap.rise), w: trap.w, h: trap.h * trap.rise });
+        });
+        const hitsSaw = saws.some((saw) => sawHit(player, saw));
+        const hitsDrop = state.drops.some((trap) => overlap(player, { x: trap.x, y: trap.yNow, w: trap.w, h: trap.h }));
+        if (hitsStatic || hitsPop || hitsSaw || hitsDrop || player.y > LOGICAL_HEIGHT + 100) {
+          die();
+          return;
+        }
+        if (!state.checkpoint && player.x > checkpointX) {
+          state.checkpoint = true;
+          updateHud();
+        }
+        if (overlap(player, goal)) {
+          state.mode = "won";
+          input.left = false;
+          input.right = false;
+          input.jump = false;
+          updateHud();
+        }
+        const cameraTarget = clamp(player.x - state.viewWidth * .35, 0, Math.max(0, WORLD_WIDTH - state.viewWidth));
+        state.camera += (cameraTarget - state.camera) * .16;
+      }
+
+      function drawSpike(spike, progress, hidden) {
+        const amount = progress === undefined ? 1 : progress;
+        const height = spike.h * amount;
+        if (height <= 0) return;
+        const top = spike.y + spike.h - height;
+        const base = spike.y + spike.h;
+        context.beginPath();
+        context.moveTo(spike.x, base);
+        context.lineTo(spike.x + spike.w / 2, top);
+        context.lineTo(spike.x + spike.w, base);
+        context.closePath();
+        context.fillStyle = hidden ? "#6d2944" : "#f14f69";
+        context.fill();
+        context.beginPath();
+        context.moveTo(spike.x + spike.w / 2, top + 3);
+        context.lineTo(spike.x + spike.w - 5, base - 3);
+        context.lineTo(spike.x + spike.w / 2 + 2, base - 3);
+        context.closePath();
+        context.fillStyle = hidden ? "#9f3b5c" : "#ffb5c1";
+        context.fill();
+      }
+      function drawPlatform(platform) {
+        context.fillStyle = "#1d293b";
+        context.fillRect(platform.x, platform.y, platform.w, platform.h);
+        context.fillStyle = "#85e5d7";
+        context.fillRect(platform.x, platform.y, platform.w, 4);
+        context.fillStyle = "#35465d";
+        context.fillRect(platform.x, platform.y + 4, platform.w, 5);
+        context.strokeStyle = "rgba(126, 163, 198, .16)";
+        context.lineWidth = 2;
+        for (let x = platform.x + 30; x < platform.x + platform.w; x += 52) {
+          context.beginPath();
+          context.moveTo(x, platform.y + 25);
+          context.lineTo(x - 20, platform.y + 45);
+          context.stroke();
+        }
+      }
+      function drawSaw(saw) {
+        const y = saw.y + Math.sin(state.elapsed * saw.speed + saw.phase) * saw.range;
+        context.save();
+        context.translate(saw.x, y);
+        context.rotate(state.elapsed * 7 + saw.phase);
+        for (let blade = 0; blade < 10; blade += 1) {
+          context.rotate(Math.PI * 2 / 10);
+          context.beginPath();
+          context.moveTo(saw.r - 3, 0);
+          context.lineTo(saw.r + 9, 5);
+          context.lineTo(saw.r + 1, 10);
+          context.closePath();
+          context.fillStyle = "#dce9fc";
+          context.fill();
+        }
+        context.beginPath();
+        context.arc(0, 0, saw.r - 4, 0, Math.PI * 2);
+        context.fillStyle = "#3b4d66";
+        context.fill();
+        context.beginPath();
+        context.arc(0, 0, 6, 0, Math.PI * 2);
+        context.fillStyle = "#f14f69";
+        context.fill();
+        context.restore();
+      }
+      function drawPlayer(player) {
+        context.save();
+        context.translate(player.x + player.w / 2, player.y + player.h);
+        context.scale(1 + player.squash * .1, 1 - player.squash * .08);
+        context.translate(-player.w / 2, -player.h);
+        context.fillStyle = "#f4f8ff";
+        context.fillRect(0, 0, player.w, player.h);
+        context.fillStyle = "#111829";
+        context.fillRect(player.facing > 0 ? 18 : 5, 10, 7, 8);
+        context.fillStyle = "#85e5d7";
+        context.fillRect(4, 5, 5, 4);
+        context.restore();
+      }
+      function drawSky(viewWidth) {
+        const gradient = context.createLinearGradient(0, 0, 0, LOGICAL_HEIGHT);
+        gradient.addColorStop(0, "#111a30");
+        gradient.addColorStop(.6, "#171e31");
+        gradient.addColorStop(1, "#0c101c");
+        context.fillStyle = gradient;
+        context.fillRect(0, 0, viewWidth, LOGICAL_HEIGHT);
+        context.fillStyle = "rgba(133, 229, 215, .09)";
+        context.beginPath();
+        context.arc(viewWidth * .78, 130, 80, 0, Math.PI * 2);
+        context.fill();
+        context.fillStyle = "#111a30";
+        context.beginPath();
+        context.arc(viewWidth * .78 + 24, 116, 82, 0, Math.PI * 2);
+        context.fill();
+        context.fillStyle = "rgba(220, 240, 255, .45)";
+        for (let star = 0; star < 36; star += 1) {
+          let x = (star * 137 + 31 - state.camera * .08) % (viewWidth + 80);
+          if (x < 0) x += viewWidth + 80;
+          const y = 58 + (star * 71) % 265;
+          context.fillRect(x, y, star % 3 === 0 ? 2 : 1, 1);
+        }
+        context.save();
+        context.translate(-state.camera * .17, 0);
+        for (let index = -2; index < 32; index += 1) {
+          const x = index * 126;
+          const height = 75 + ((index * 43 + 190) % 140);
+          context.fillStyle = "#121a2b";
+          context.fillRect(x, 530 - height, 90, height + 160);
+          context.fillStyle = "rgba(118, 226, 211, .10)";
+          context.fillRect(x + 16, 550 - height, 21, 3);
+          context.fillRect(x + 16, 580 - height, 21, 3);
+        }
+        context.restore();
+        context.fillStyle = "rgba(255,255,255,.03)";
+        for (let y = 0; y < LOGICAL_HEIGHT; y += 4) context.fillRect(0, y, viewWidth, 1);
+      }
+      function drawWorld() {
+        context.fillStyle = "rgba(70, 110, 145, .16)";
+        context.fillRect(0, 583, WORLD_WIDTH, 2);
+        platforms.forEach(drawPlatform);
+        fixedSpikes.forEach((spike) => drawSpike(spike));
+        state.pops.forEach((trap) => {
+          if (trap.rise > 0) drawSpike(trap, trap.rise, trap.rise < .62);
+          else {
+            context.fillStyle = "rgba(241,79,105,.62)";
+            context.fillRect(trap.x + 5, trap.y + trap.h - 3, trap.w - 10, 2);
+          }
+        });
+        state.drops.forEach((trap) => {
+          context.fillStyle = "#f14f69";
+          context.fillRect(trap.x, trap.yNow, trap.w, trap.h);
+          context.fillStyle = "#ffc0ca";
+          context.fillRect(trap.x + 4, trap.yNow + 4, trap.w - 8, 3);
+          if (!trap.active) {
+            context.strokeStyle = "rgba(190, 215, 240, .32)";
+            context.lineWidth = 1;
+            context.beginPath();
+            context.moveTo(trap.x + trap.w / 2, 0);
+            context.lineTo(trap.x + trap.w / 2, trap.yNow);
+            context.stroke();
+          }
+        });
+        saws.forEach(drawSaw);
+        context.fillStyle = "#85e5d7";
+        context.fillRect(checkpointX, 460, 3, 125);
+        context.beginPath();
+        context.moveTo(checkpointX + 3, 466);
+        context.lineTo(checkpointX + 46, 479);
+        context.lineTo(checkpointX + 3, 493);
+        context.closePath();
+        context.fillStyle = state.checkpoint ? "#85e5d7" : "#3b5e66";
+        context.fill();
+        context.fillStyle = "rgba(133,229,215,.12)";
+        context.fillRect(goal.x - 8, goal.y - 8, goal.w + 16, goal.h + 8);
+        context.strokeStyle = "#85e5d7";
+        context.lineWidth = 4;
+        context.strokeRect(goal.x, goal.y, goal.w, goal.h);
+        context.fillStyle = "#f3f8ff";
+        context.fillRect(goal.x + 10, goal.y + 12, goal.w - 20, 6);
+        context.fillStyle = "#85e5d7";
+        context.fillRect(goal.x + 10, goal.y + 28, goal.w - 20, 24);
+        if (state.mode === "dead" && state.deathPoint) {
+          const radius = 18 + (36 - state.deathFrames) * 1.7;
+          context.strokeStyle = "rgba(241,79,105," + Math.max(0, state.deathFrames / 48) + ")";
+          context.lineWidth = 4;
+          context.beginPath();
+          context.arc(state.deathPoint.x, state.deathPoint.y, radius, 0, Math.PI * 2);
+          context.stroke();
+        }
+        if (state.mode !== "dead") drawPlayer(state.player);
+      }
+      function drawOverlay(viewWidth) {
+        const progress = clamp(state.player.x / (goal.x + goal.w), 0, 1);
+        context.fillStyle = "rgba(4,7,13,.63)";
+        context.fillRect(25, 24, 202, 36);
+        context.fillStyle = "#a3b8d0";
+        context.font = "12px Courier New, monospace";
+        context.fillText("ESCAPE ROUTE", 37, 45);
+        context.fillStyle = "#2f435a";
+        context.fillRect(37, 53, 170, 2);
+        context.fillStyle = "#85e5d7";
+        context.fillRect(37, 53, 170 * progress, 2);
+        context.textAlign = "right";
+        context.fillStyle = "#dce9fa";
+        context.fillText("DEATHS " + String(state.deaths).padStart(2, "0"), viewWidth - 28, 45);
+        context.textAlign = "left";
+        if (state.flash > 0) {
+          context.fillStyle = "rgba(241,79,105," + state.flash / 42 + ")";
+          context.fillRect(0, 0, viewWidth, LOGICAL_HEIGHT);
+        }
+        if (state.mode === "ready" || state.mode === "won") {
+          context.fillStyle = "rgba(5,8,14,.46)";
+          context.fillRect(0, 0, viewWidth, LOGICAL_HEIGHT);
+          context.textAlign = "center";
+          context.fillStyle = state.mode === "won" ? "#85e5d7" : "#f3f8ff";
+          context.font = "700 40px Courier New, monospace";
+          context.fillText(state.mode === "won" ? "ROUTE BREACHED" : "TRAP ADVENTURE 2", viewWidth / 2, 280);
+          context.fillStyle = "#f14f69";
+          context.font = "700 15px Courier New, monospace";
+          context.fillText(state.mode === "won" ? "YOU MADE THE FLOOR LOSE" : "THE FLOOR IS LYING TO YOU", viewWidth / 2, 312);
+          context.fillStyle = "#bed0e5";
+          context.font = "13px Courier New, monospace";
+          context.fillText(state.mode === "won" ? "PRESS REBOOT TO GO AGAIN" : "PRESS A / D OR TAP THE CONTROLS TO BEGIN", viewWidth / 2, 347);
+          context.textAlign = "left";
+        }
+      }
+      function render() {
+        if (!context) return;
+        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+        context.clearRect(0, 0, cssWidth, cssHeight);
+        const scale = cssHeight / LOGICAL_HEIGHT;
+        const viewWidth = cssWidth / scale;
+        state.viewWidth = viewWidth;
+        state.camera = clamp(state.camera, 0, Math.max(0, WORLD_WIDTH - viewWidth));
+        context.save();
+        context.scale(scale, scale);
+        drawSky(viewWidth);
+        context.save();
+        context.translate(-state.camera, 0);
+        drawWorld();
+        context.restore();
+        drawOverlay(viewWidth);
+        context.restore();
+      }
+      function formatTime(seconds) {
+        const minutes = Math.floor(seconds / 60);
+        const remainder = (seconds % 60).toFixed(1).padStart(4, "0");
+        return String(minutes).padStart(2, "0") + ":" + remainder;
+      }
+      function updateHud() {
+        timeElement.textContent = formatTime(state.elapsed);
+        deathsElement.textContent = String(state.deaths).padStart(2, "0");
+        sectorElement.textContent = state.mode === "won" ? "ROUTE BREACHED" : state.checkpoint ? "CHECKPOINT // 02" : "SECTOR // 01";
+      }
+      function resize() {
+        const bounds = canvas.getBoundingClientRect();
+        cssWidth = Math.max(1, bounds.width);
+        cssHeight = Math.max(1, bounds.height);
+        pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.floor(cssWidth * pixelRatio);
+        canvas.height = Math.floor(cssHeight * pixelRatio);
+        context.imageSmoothingEnabled = false;
+      }
+      function setControl(name, active) {
+        if (active) beginRun();
+        if (name === "jump" && active && !input.jump) input.jumpPressed = true;
+        input[name] = active;
+      }
+
+      window.addEventListener("resize", resize);
+      window.addEventListener("blur", () => {
+        input.left = false;
+        input.right = false;
+        input.jump = false;
+        input.jumpPressed = false;
+      });
+      document.addEventListener("keydown", (event) => {
+        const left = event.code === "ArrowLeft" || event.code === "KeyA";
+        const right = event.code === "ArrowRight" || event.code === "KeyD";
+        const jump = event.code === "ArrowUp" || event.code === "KeyW" || event.code === "Space";
+        if (event.code === "KeyR") {
+          event.preventDefault();
+          resetRun();
+          return;
+        }
+        if (!left && !right && !jump) return;
+        event.preventDefault();
+        if (left) setControl("left", true);
+        if (right) setControl("right", true);
+        if (jump) setControl("jump", true);
+      }, { passive: false });
+      document.addEventListener("keyup", (event) => {
+        if (event.code === "ArrowLeft" || event.code === "KeyA") setControl("left", false);
+        if (event.code === "ArrowRight" || event.code === "KeyD") setControl("right", false);
+        if (event.code === "ArrowUp" || event.code === "KeyW" || event.code === "Space") setControl("jump", false);
+      });
+      canvas.addEventListener("pointerdown", beginRun);
+      restartButton.addEventListener("click", resetRun);
+      document.querySelectorAll("[data-control]").forEach((button) => {
+        const control = button.dataset.control;
+        const release = () => {
+          setControl(control, false);
+          button.classList.remove("pressed");
+        };
+        button.addEventListener("pointerdown", (event) => {
+          event.preventDefault();
+          if (button.setPointerCapture) button.setPointerCapture(event.pointerId);
+          setControl(control, true);
+          button.classList.add("pressed");
+        });
+        button.addEventListener("pointerup", release);
+        button.addEventListener("pointercancel", release);
+        button.addEventListener("lostpointercapture", release);
+      });
+
+      let previous = performance.now();
+      let accumulator = 0;
+      function frame(now) {
+        accumulator += Math.min(.1, (now - previous) / 1000);
+        previous = now;
+        let updates = 0;
+        while (accumulator >= STEP && updates < 5) {
+          tick();
+          accumulator -= STEP;
+          updates += 1;
+          framesSinceHud += 1;
+        }
+        if (updates === 5) accumulator = 0;
+        if (framesSinceHud >= 6) {
+          framesSinceHud = 0;
+          updateHud();
+        }
+        render();
+        window.requestAnimationFrame(frame);
+      }
+      resize();
+      updateHud();
+      window.requestAnimationFrame(frame);
+    </script>
   </body>
 </html>
