@@ -723,6 +723,7 @@ export default function App() {
   const gameRef = useRef<GameState>(createGame());
   const inputRef = useRef<InputState>({ left: false, right: false, jump: false, jumpJustPressed: false });
   const [hud, setHud] = useState<HudState>({ mode: "ready", deaths: 0, checkpoint: 0, elapsed: 0 });
+  const [canvasFailed, setCanvasFailed] = useState(false);
   const hudRef = useRef<HudState>({ mode: "ready", deaths: 0, checkpoint: 0, elapsed: 0 });
 
   const syncHud = useCallback((game: GameState) => {
@@ -763,7 +764,14 @@ export default function App() {
   const handlePadPointer = useCallback(
     (event: ReactPointerEvent<HTMLButtonElement>, control: "left" | "right" | "jump", active: boolean) => {
       event.preventDefault();
-      if (active) event.currentTarget.setPointerCapture(event.pointerId);
+      if (active) {
+        try {
+          event.currentTarget.setPointerCapture(event.pointerId);
+        } catch {
+          // Some browsers throw for mouse/touch edge cases (e.g. the pointer
+          // is already gone). The controls work fine without capture.
+        }
+      }
       setTouchControl(control, active);
     },
     [setTouchControl],
@@ -774,7 +782,12 @@ export default function App() {
     if (!canvas) return;
 
     const context = canvas.getContext("2d", { alpha: false });
-    if (!context) return;
+    if (!context) {
+      // Canvas 2D unavailable (very old browser / disabled). Show a message
+      // through React state instead of a silently blank canvas.
+      setCanvasFailed(true);
+      return;
+    }
 
     let animationFrame = 0;
     let previousTime = performance.now();
@@ -793,8 +806,12 @@ export default function App() {
       context.imageSmoothingEnabled = false;
     };
 
-    const resizeObserver = new ResizeObserver(resizeCanvas);
-    resizeObserver.observe(canvas);
+    // ResizeObserver exists in all modern browsers, but fall back to the
+    // window resize event on older ones instead of throwing (white screen).
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined" ? new ResizeObserver(resizeCanvas) : null;
+    if (resizeObserver) resizeObserver.observe(canvas);
+    else window.addEventListener("resize", resizeCanvas);
     resizeCanvas();
 
     const clearInput = () => {
@@ -870,7 +887,8 @@ export default function App() {
     animationFrame = requestAnimationFrame(frame);
     return () => {
       cancelAnimationFrame(animationFrame);
-      resizeObserver.disconnect();
+      if (resizeObserver) resizeObserver.disconnect();
+      else window.removeEventListener("resize", resizeCanvas);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("blur", clearInput);
@@ -921,6 +939,13 @@ export default function App() {
             aria-label="Trap Adventure 2 game canvas. Use A and D or arrow keys to move, Space to jump, and R to reboot."
             role="img"
           />
+          {canvasFailed && (
+            <div className="absolute inset-0 flex items-center justify-center bg-[#101728] p-6 text-center">
+              <p className="font-mono text-xs font-bold tracking-[0.2em] text-[#f14f69]">
+                CANVAS 2D IS NOT AVAILABLE IN THIS BROWSER
+              </p>
+            </div>
+          )}
           <div className="scan-sweep pointer-events-none absolute inset-x-0 top-0 h-px bg-[#85e5d7]/40" />
           <div className="pointer-events-none absolute bottom-3 left-4 flex items-center gap-2 text-[10px] font-bold tracking-[0.13em] text-[#9db0c8] sm:bottom-4 sm:left-5">
             <span className="h-1.5 w-1.5 bg-[#f14f69]" aria-hidden="true" />
